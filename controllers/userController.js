@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 
+
 // Ambil semua user
 const getAllUsers = async (req, res) => {
   try {
@@ -59,16 +60,21 @@ const register = async (req, res) => {
   const { name, email, password, role } = req.body;
 
   if (!name || !email || !password) {
+    console.log('❌ Data tidak lengkap');
     return res.status(400).json({ message: 'Lengkapi semua data' });
   }
 
   try {
+    console.log('🔍 Mencari user...');
     const existing = await User.findOne({ email });
     if (existing) {
+      console.log('⚠️ Email sudah terdaftar');
       return res.status(409).json({ message: 'Email sudah terdaftar' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    console.log('📦 Membuat user baru...');
     const newUser = new User({
       name,
       email,
@@ -76,12 +82,18 @@ const register = async (req, res) => {
       role: role || 'kasir'
     });
 
-    await newUser.save();
+    console.log('💾 Menyimpan ke MongoDB...');
+    const saved = await newUser.save();
+    console.log('✅ Sukses simpan:', saved);
+
     res.status(201).json({ message: 'User berhasil didaftarkan' });
   } catch (error) {
-    res.status(500).json({ message: 'Terjadi kesalahan server' });
+    console.error('❌ Error saat register:', error);
+    res.status(500).json({ message: 'Terjadi kesalahan server', error: error.message });
   }
 };
+
+
 
 // Login
 const login = async (req, res) => {

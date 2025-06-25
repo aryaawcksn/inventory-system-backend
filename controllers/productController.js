@@ -1,68 +1,79 @@
-const db = require('../models/db');
+const Product = require('../models/Product');
 
 // GET semua produk
-exports.getAllProducts = (req, res) => {
-  db.query('SELECT * FROM products', (err, results) => {
-    if (err) {
-      console.error('Gagal mengambil produk:', err);
-      return res.status(500).json({ message: 'Gagal mengambil data produk' });
-    }
-    res.status(200).json({ products: results });
-  });
+exports.getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.status(200).json({ products });
+  } catch (err) {
+    console.error('Gagal mengambil produk:', err);
+    res.status(500).json({ message: 'Gagal mengambil data produk' });
+  }
 };
 
-// POST produk baru
-exports.addProduct = (req, res) => {
+// POST produk baru (atau update stok jika SKU sudah ada)
+exports.addProduct = async (req, res) => {
   const { name, category, sku, stock, price, status } = req.body;
 
   if (!name || !category || !sku || stock == null || price == null) {
-  return res.status(400).json({ message: 'Lengkapi semua data produk' });
-}
+    return res.status(400).json({ message: 'Lengkapi semua data produk' });
+  }
 
+  try {
+    const existing = await Product.findOne({ sku });
 
-  // Cek apakah produk dengan SKU yang sama sudah ada
-  const checkSql = 'SELECT * FROM products WHERE sku = ?';
-  db.query(checkSql, [sku], (err, results) => {
-    if (err) return res.status(500).json({ message: 'Gagal cek SKU' });
-
-    if (results.length > 0) {
+    if (existing) {
       // SKU sudah ada, update stok saja
-      const currentStock = results[0].stock;
-      const newStock = currentStock + parseInt(stock);
-      const updateSql = 'UPDATE products SET stock = ? WHERE sku = ?';
-
-      db.query(updateSql, [newStock, sku], (err2) => {
-        if (err2) return res.status(500).json({ message: 'Gagal update stok' });
-        return res.status(200).json({ message: 'Stok produk berhasil diperbarui' });
-      });
+      existing.stock += parseInt(stock);
+      await existing.save();
+      return res.status(200).json({ message: 'Stok produk berhasil diperbarui' });
     } else {
-      // SKU belum ada, insert baru
-      const insertSql = 'INSERT INTO products (name, category, sku, stock, price, status) VALUES (?, ?, ?, ?, ?, ?)';
-      db.query(insertSql, [name, category, sku, stock, price, status || 'active'], (err3) => {
-        if (err3) return res.status(500).json({ message: 'Gagal tambah produk baru' });
-        return res.status(201).json({ message: 'Produk berhasil ditambahkan' });
-      });
+      // SKU belum ada, tambah produk baru
+      const newProduct = new Product({ name, category, sku, stock, price, status: status || 'active' });
+      await newProduct.save();
+      return res.status(201).json({ message: 'Produk berhasil ditambahkan' });
     }
-  });
+  } catch (err) {
+    console.error('Gagal tambah/update produk:', err);
+    res.status(500).json({ message: 'Gagal menambahkan atau memperbarui produk' });
+  }
 };
 
-
 // PUT edit produk
-exports.updateProduct = (req, res) => {
+exports.updateProduct = async (req, res) => {
   const { id } = req.params;
   const { name, category, stock, price, sku, status } = req.body;
-  const sql = 'UPDATE products SET name = ?, category = ?, stock = ?, price = ?, sku = ?, status = ? WHERE id = ?';
-  db.query(sql, [name, category, stock, price, sku, status, id], (err, result) => {
-    if (err) return res.status(500).json({ message: 'Gagal update produk' });
+
+  try {
+    const updated = await Product.findByIdAndUpdate(id, {
+      name, category, stock, price, sku, status
+    });
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Produk tidak ditemukan' });
+    }
+
     res.json({ message: 'Produk berhasil diperbarui' });
-  });
+  } catch (err) {
+    console.error('Gagal update produk:', err);
+    res.status(500).json({ message: 'Gagal update produk' });
+  }
 };
 
 // DELETE produk
-exports.deleteProduct = (req, res) => {
+exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
-  db.query('DELETE FROM products WHERE id = ?', [id], (err, result) => {
-    if (err) return res.status(500).json({ message: 'Gagal menghapus produk' });
+
+  try {
+    const deleted = await Product.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Produk tidak ditemukan' });
+    }
+
     res.json({ message: 'Produk berhasil dihapus' });
-  });
+  } catch (err) {
+    console.error('Gagal hapus produk:', err);
+    res.status(500).json({ message: 'Gagal menghapus produk' });
+  }
 };
