@@ -38,13 +38,14 @@ const addSale = async (req, res) => {
 
     // Simpan penjualan
     const sale = new Sale({
-      date,
-      customer,
-      items,
-      qty,
-      total,
-      status: status || 'completed'
-    });
+  date,
+  customer,
+  productId, // ⬅️ tambahkan ini
+  items,
+  qty,
+  total,
+  status: status || 'completed'
+});
     await sale.save();
 
     res.status(201).json({ message: 'Penjualan berhasil ditambahkan dan stok diperbarui' });
