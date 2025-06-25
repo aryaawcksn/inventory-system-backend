@@ -6,6 +6,15 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ['admin', 'kasir'], default: 'kasir' },
   last_logout: { type: Date, default: null }
-}, { timestamps: true }); // optional: menambahkan createdAt dan updatedAt
+}, { timestamps: true });
+
+// ✅ Tambahkan virtual agar _id → id otomatis saat dikirim ke JSON
+userSchema.set('toJSON', {
+  virtuals: true,
+  versionKey: false,
+  transform: function (doc, ret) {
+    delete ret._id;
+  }
+});
 
 module.exports = mongoose.model('User', userSchema);

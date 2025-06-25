@@ -1,19 +1,28 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 
+// 🔧 Fungsi bantu untuk ubah _id jadi id
+const formatUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  last_logout: user.last_logout
+});
 
-// Ambil semua user
+// ✅ Ambil semua user
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}, 'id name email role last_logout');
-    res.status(200).json({ users });
+    const users = await User.find({}, 'name email role last_logout');
+    const formattedUsers = users.map(formatUser);
+    res.status(200).json({ users: formattedUsers });
   } catch (err) {
     console.error('Gagal ambil data:', err);
     res.status(500).json({ message: 'Gagal mengambil data pengguna' });
   }
 };
 
-// Update user
+// ✅ Update user
 const updateUser = async (req, res) => {
   const { id } = req.params;
   const { name, email, password, role } = req.body;
@@ -41,7 +50,7 @@ const updateUser = async (req, res) => {
   }
 };
 
-// Hapus user
+// ✅ Hapus user
 const deleteUser = async (req, res) => {
   try {
     const result = await User.findByIdAndDelete(req.params.id);
@@ -55,26 +64,22 @@ const deleteUser = async (req, res) => {
   }
 };
 
-// Register
+// ✅ Register
 const register = async (req, res) => {
   const { name, email, password, role } = req.body;
 
   if (!name || !email || !password) {
-    console.log('❌ Data tidak lengkap');
     return res.status(400).json({ message: 'Lengkapi semua data' });
   }
 
   try {
-    console.log('🔍 Mencari user...');
     const existing = await User.findOne({ email });
     if (existing) {
-      console.log('⚠️ Email sudah terdaftar');
       return res.status(409).json({ message: 'Email sudah terdaftar' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    console.log('📦 Membuat user baru...');
     const newUser = new User({
       name,
       email,
@@ -82,9 +87,7 @@ const register = async (req, res) => {
       role: role || 'kasir'
     });
 
-    console.log('💾 Menyimpan ke MongoDB...');
     const saved = await newUser.save();
-    console.log('✅ Sukses simpan:', saved);
 
     res.status(201).json({ message: 'User berhasil didaftarkan' });
   } catch (error) {
@@ -93,9 +96,7 @@ const register = async (req, res) => {
   }
 };
 
-
-
-// Login
+// ✅ Login
 const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -112,20 +113,14 @@ const login = async (req, res) => {
 
     res.status(200).json({
       message: 'Login berhasil',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        last_logout: user.last_logout
-      }
+      user: formatUser(user)
     });
   } catch (err) {
     res.status(500).json({ message: 'Error server saat login' });
   }
 };
 
-// Logout
+// ✅ Logout
 const logout = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: 'Email tidak ditemukan' });
@@ -138,19 +133,19 @@ const logout = async (req, res) => {
   }
 };
 
-// Get profile
+// ✅ Get profile by email
 const getProfile = async (req, res) => {
   const email = req.query.email;
   try {
-    const user = await User.findOne({ email }, 'name email role');
+    const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'User tidak ditemukan.' });
-    res.status(200).json(user);
+    res.status(200).json(formatUser(user));
   } catch (err) {
     res.status(500).json({ message: 'Gagal mengambil data.' });
   }
 };
 
-// Update password
+// ✅ Update password
 const updatePassword = async (req, res) => {
   const { email, password } = req.body;
 
