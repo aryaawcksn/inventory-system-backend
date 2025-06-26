@@ -1,14 +1,20 @@
-const db = require('../models/db');
+// utils/logger.js (versi MongoDB / Mongoose)
+const ActivityLog = require('../models/activitylog'); // pastikan path ini benar
 
-const logActivity = (user, action) => {
-  const sql = `INSERT INTO activity_logs (user_id, name, role, action) VALUES (?, ?, ?, ?)`;
-  db.query(sql, [user.id, user.name, user.role, action], (err) => {
-    if (err) {
-      console.error('❌ Gagal mencatat aktivitas:', err);
-    } else {
-      console.log(`📝 Aktivitas: ${user.name} - ${action}`);
-    }
-  });
+const logActivity = async (user, action) => {
+  if (!user || !user.name) return;
+
+  try {
+    await ActivityLog.create({
+      userId: user.id,
+      name: user.name,
+      role: user.role,
+      action,
+    });
+    console.log(`📝 Aktivitas: ${user.name} - ${action}`);
+  } catch (err) {
+    console.error('❌ Gagal mencatat aktivitas:', err);
+  }
 };
 
 module.exports = logActivity;
