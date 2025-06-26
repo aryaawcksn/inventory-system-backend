@@ -18,7 +18,7 @@ const getAllSales = async (req, res) => {
 
 // === Tambah penjualan baru + kurangi stok ===
 const addSale = async (req, res) => {
-  const { date, customer, productId, items, qty, total, status } = req.body;
+  const { date, productId, items, qty, total, status } = req.body;
 
   if (!productId || !qty) {
     return res.status(400).json({ message: 'Produk dan jumlah wajib diisi' });
@@ -39,7 +39,7 @@ const addSale = async (req, res) => {
     // Simpan penjualan
     const sale = new Sale({
   date,
-  customer,
+
   productId, // ⬅️ tambahkan ini
   items,
   qty,
@@ -58,7 +58,7 @@ const addSale = async (req, res) => {
 const exportSales = async (req, res) => {
   try {
     const sales = await Sale.find();
-    const fields = ['_id', 'date', 'customer', 'items', 'qty', 'total', 'status'];
+    const fields = ['_id', 'date', 'items', 'qty', 'total', 'status'];
     const parser = new Parser({ fields });
     const csvData = parser.parse(sales);
 
@@ -85,11 +85,11 @@ const importSales = (req, res) => {
     fs.createReadStream(filePath)
       .pipe(csv())
       .on('data', (row) => {
-        const { date, customer, items, qty, total, status } = row;
-        if (date && customer && items && qty && total) {
+        const { date, items, qty, total, status } = row;
+        if (date && items && qty && total) {
           salesData.push({
             date,
-            customer,
+          
             items,
             qty: parseInt(qty),
             total: parseFloat(total),

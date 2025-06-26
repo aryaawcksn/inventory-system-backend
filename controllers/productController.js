@@ -13,9 +13,9 @@ exports.getAllProducts = async (req, res) => {
 
 // POST produk baru (atau update stok jika SKU sudah ada)
 exports.addProduct = async (req, res) => {
-  const { name, category, sku, stock, price, status } = req.body;
+  const { name, sku, stock, price, status } = req.body;
 
-  if (!name || !category || !sku || stock == null || price == null) {
+  if (!name || !sku || stock == null || price == null) {
     return res.status(400).json({ message: 'Lengkapi semua data produk' });
   }
 
@@ -29,7 +29,7 @@ exports.addProduct = async (req, res) => {
       return res.status(200).json({ message: 'Stok produk berhasil diperbarui' });
     } else {
       // SKU belum ada, tambah produk baru
-      const newProduct = new Product({ name, category, sku, stock, price, status: status || 'active' });
+      const newProduct = new Product({ name, sku, stock, price, status: status || 'active' });
       await newProduct.save();
       return res.status(201).json({ message: 'Produk berhasil ditambahkan' });
     }
@@ -42,11 +42,11 @@ exports.addProduct = async (req, res) => {
 // PUT edit produk
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, category, stock, price, sku, status } = req.body;
+  const { name, stock, price, sku, status } = req.body;
 
   try {
     const updated = await Product.findByIdAndUpdate(id, {
-      name, category, stock, price, sku, status
+      name, stock, price, sku, status
     });
 
     if (!updated) {
