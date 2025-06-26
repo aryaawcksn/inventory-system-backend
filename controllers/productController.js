@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
-const { logActivity } = require('./activityController');
+// controllers/productController.js
+const logActivity = require('../utils/logger');
 const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
