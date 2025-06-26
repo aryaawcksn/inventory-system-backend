@@ -10,15 +10,20 @@ const PORT = process.env.PORT || 5000;
 const userRoutes = require('./routes/users');
 const productRoutes = require('./routes/products');
 const salesRoutes = require('./routes/sales');
+const systemRoutes = require('./routes/system');
+const activityRoutes = require('./routes/activity');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/activity', activityRoutes);
+
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/system', systemRoutes);
 
 // Test route
 app.get('/', (req, res) => {
