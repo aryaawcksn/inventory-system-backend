@@ -11,7 +11,8 @@ const userRoutes = require('./routes/users');
 const productRoutes = require('./routes/products');
 const salesRoutes = require('./routes/sales');
 const systemRoutes = require('./routes/system');
-const activityRoutes = require('./routes/activity');
+const activityRoutes = require('./routes/activityRoutes');
+
 
 // Middleware
 app.use(cors());

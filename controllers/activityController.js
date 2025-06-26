@@ -1,6 +1,7 @@
 const ActivityLog = require('../models/activitylog');
 
-exports.getLogs = async (req, res) => {
+
+exports.getAllLogs = async (req, res) => {
   try {
     const logs = await ActivityLog.find().sort({ timestamp: -1 });
     res.json({ logs });
@@ -9,15 +10,13 @@ exports.getLogs = async (req, res) => {
   }
 };
 
-exports.logActivity = async (user, action) => {
+exports.addLog = async (req, res) => {
   try {
-    await ActivityLog.create({
-      userId: user.id,
-      name: user.name,
-      role: user.role,
-      action,
-    });
+    const { user_id, name, role, action } = req.body;
+    const log = new ActivityLog({ user_id, name, role, action });
+    await log.save();
+    res.status(201).json({ message: 'Log berhasil ditambahkan', log });
   } catch (err) {
-    console.error('❌ Gagal menyimpan log aktivitas:', err.message);
+    res.status(500).json({ message: 'Gagal menambahkan log' });
   }
 };
