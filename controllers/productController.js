@@ -1,5 +1,4 @@
 const Product = require('../models/Product');
-const { logActivity } = require('./activityController');
 
 // GET semua produk
 exports.getAllProducts = async (req, res) => {
@@ -15,7 +14,6 @@ exports.getAllProducts = async (req, res) => {
 // POST produk baru (atau update stok jika SKU sudah ada)
 exports.addProduct = async (req, res) => {
   const { name, sku, stock, price, status } = req.body;
-  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
 
   if (!name || !sku || stock == null || price == null) {
     return res.status(400).json({ message: 'Lengkapi semua data produk' });
@@ -25,34 +23,18 @@ exports.addProduct = async (req, res) => {
     const existing = await Product.findOne({ sku });
 
     if (existing) {
+      // SKU sudah ada, update stok saja
       existing.stock += parseInt(stock);
       await existing.save();
-
-      try {
-        if (user) {
-          await logActivity(user, `Menambah stok untuk SKU ${sku}: +${stock} (Total: ${existing.stock})`);
-        }
-      } catch (logErr) {
-        console.error('Gagal mencatat log stok:', logErr.message);
-      }
-
       return res.status(200).json({ message: 'Stok produk berhasil diperbarui' });
     } else {
+      // SKU belum ada, tambah produk baru
       const newProduct = new Product({ name, sku, stock, price, status: status || 'active' });
       await newProduct.save();
-
-      try {
-        if (user) {
-          await logActivity(user, `Menambahkan produk baru: ${name} (SKU: ${sku})`);
-        }
-      } catch (logErr) {
-        console.error('Gagal mencatat log produk:', logErr.message);
-      }
-
       return res.status(201).json({ message: 'Produk berhasil ditambahkan' });
     }
   } catch (err) {
-    console.error('Gagal tambah/update produk:', err.message, err);
+    console.error('Gagal tambah/update produk:', err);
     res.status(500).json({ message: 'Gagal menambahkan atau memperbarui produk' });
   }
 };
@@ -61,7 +43,6 @@ exports.addProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
   const { name, stock, price, sku, status } = req.body;
-  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
 
   try {
     const updated = await Product.findByIdAndUpdate(id, {
@@ -72,7 +53,6 @@ exports.updateProduct = async (req, res) => {
       return res.status(404).json({ message: 'Produk tidak ditemukan' });
     }
 
-    logActivity(user, `Mengedit produk: ${name} (SKU: ${sku})`);
     res.json({ message: 'Produk berhasil diperbarui' });
   } catch (err) {
     console.error('Gagal update produk:', err);
@@ -85,12 +65,9 @@ exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
   const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: 'ID tidak valid' });
-  }
-
   try {
     const deleted = await Product.findByIdAndDelete(id);
+
     if (!deleted) {
       return res.status(404).json({ message: 'Produk tidak ditemukan' });
     }
@@ -102,3 +79,20 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ message: 'Gagal menghapus produk' });
   }
 };
+
+// DELETE semua produk
+exports.resetProducts = async (req, res) => {
+  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
+
+  try {
+    const deleted = await Product.deleteMany({});
+    logActivity(user, `Mereset semua data produk (${deleted.deletedCount} produk dihapus)`);
+
+    res.json({ message: 'Semua data produk berhasil direset' });
+  } catch (err) {
+    console.error('Gagal reset produk:', err);
+    res.status(500).json({ message: 'Gagal mereset produk' });
+  }
+};
+
+
