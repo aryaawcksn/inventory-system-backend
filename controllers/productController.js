@@ -1,4 +1,6 @@
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
+
 
 // GET semua produk
 exports.getAllProducts = async (req, res) => {
@@ -74,7 +76,7 @@ exports.deleteProduct = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ message: 'ID tidak valid' });
   }
-  
+
   try {
     const deleted = await Product.findByIdAndDelete(id);
 
