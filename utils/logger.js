@@ -1,5 +1,5 @@
-// utils/logger.js (versi MongoDB / Mongoose)
-const ActivityLog = require('../models/activitylog'); // pastikan path ini benar
+// utils/logger.js
+const ActivityLog = require('../models/activitylog');
 
 const logActivity = async (user, action) => {
   if (!user || !user.name) return;
