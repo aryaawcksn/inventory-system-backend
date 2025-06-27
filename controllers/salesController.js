@@ -82,7 +82,7 @@ const importSalesJSON = async (req, res) => {
     res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
   } catch (err) {
     console.error('❌ Gagal import JSON:', err);
-    res.status(500).json({ message: 'Gagal mengimpor data JSON' });
+    res.status(500).json({ message: 'Harap Hapus Data Penjualan Terlebih Dahulu' });
   }
 };
 

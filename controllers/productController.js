@@ -1,11 +1,11 @@
 const Product = require('../models/Product');
 // controllers/productController.js
-const logActivity = require('../utils/logger');
 const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
 const { Parser } = require('json2csv');
+const { logActivity } = require('./activityController');
 
 // === MIDDLEWARE UNTUK IMPORT ===
 const upload = multer({ dest: 'uploads/' }).single('file');
@@ -94,77 +94,58 @@ exports.deleteProduct = async (req, res) => {
 };
 
 // IMPORT produk dari CSV
-exports.importProducts = (req, res) => {
-  upload(req, res, async function (err) {
-    if (err || !req.file) {
-      return res.status(400).json({ message: 'Gagal upload file' });
+exports.importProductJSON = async (req, res) => {
+  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
+
+  try {
+    const productsData = req.body;
+
+    if (!Array.isArray(productsData)) {
+      return res.status(400).json({ message: 'Format JSON tidak valid (harus array produk)' });
     }
 
-    const filePath = path.join(__dirname, '../uploads', req.file.filename);
-    const products = [];
-    const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
+    const inserted = await Product.insertMany(productsData, { ordered: false });
 
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('data', (row) => {
-        const { name, sku, stock, price, status } = row;
-        if (name && sku && stock && price) {
-          products.push({
-            name,
-            sku,
-            stock: parseInt(stock),
-            price: parseFloat(price),
-            status: status || 'active',
-          });
-        }
-      })
-      .on('end', async () => {
-        let inserted = 0;
-        let updated = 0;
+    // ✅ Catat aktivitas
+    if (user) {
+      await logActivity(user, `Import data produk: ${inserted.length} produk berhasil ditambahkan`);
+    }
 
-        for (let p of products) {
-          const existing = await Product.findOne({ sku: p.sku });
-          if (existing) {
-            existing.stock = p.stock;
-            existing.price = p.price;
-            existing.status = p.status;
-            await existing.save();
-            updated++;
-          } else {
-            await Product.create(p);
-            inserted++;
-          }
-        }
+    res.json({ message: `${inserted.length} produk berhasil diimpor` });
+  } catch (err) {
+    console.error('❌ Gagal import produk JSON:', err);
 
-        fs.unlinkSync(filePath);
-        logActivity(user, `Import produk: ${products.length} total (${inserted} baru, ${updated} update)`);
-        res.json({
-          message: `✅ Berhasil import ${products.length} produk (${inserted} baru, ${updated} update)`,
-        });
-      })
-      .on('error', (err) => {
-        console.error('❌ Gagal parsing CSV:', err);
-        res.status(500).json({ message: 'Gagal parsing CSV' });
+    // ❗ Jika error karena duplikat (kode 11000)
+    if (err.code === 11000 || err.writeErrors) {
+      const insertedCount = err.result?.result?.nInserted || 0;
+
+      // ✅ Catat aktivitas meskipun sebagian gagal
+      if (user) {
+        await logActivity(user, `Import produk sebagian berhasil: ${insertedCount} ditambahkan`);
+      }
+
+      return res.status(400).json({
+        message: `Sebagian gagal impor karena duplikat atau format salah. ${insertedCount} produk berhasil ditambahkan.`,
       });
-  });
+    }
+
+    res.status(500).json({ message: 'Gagal mengimpor produk' });
+  }
 };
 
 // EXPORT produk ke CSV
-exports.exportProducts = async (req, res) => {
+exports.exportProductJSON = async (req, res) => {
   try {
     const products = await Product.find();
-    const fields = ['_id', 'name', 'sku', 'stock', 'price', 'status'];
-    const parser = new Parser({ fields });
-    const csvData = parser.parse(products);
-
-    res.header('Content-Type', 'text/csv');
-    res.attachment('products_export.csv');
-    res.send(csvData);
+    res.header('Content-Type', 'application/json');
+    res.attachment('products_backup.json');
+    res.send(JSON.stringify(products, null, 2));
   } catch (err) {
-    console.error('❌ Gagal export:', err);
-    res.status(500).json({ message: 'Gagal export produk' });
+    console.error('❌ Gagal export produk JSON:', err);
+    res.status(500).json({ message: 'Gagal export data produk' });
   }
 };
+
 
 // RESET semua produk
 exports.resetProducts = async (req, res) => {
