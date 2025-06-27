@@ -1,14 +1,5 @@
 const Product = require('../models/Product');
-// controllers/productController.js
-const multer = require('multer');
-const csv = require('csv-parser');
-const fs = require('fs');
-const path = require('path');
-const { Parser } = require('json2csv');
 const { logActivity } = require('./activityController');
-
-// === MIDDLEWARE UNTUK IMPORT ===
-const upload = multer({ dest: 'uploads/' }).single('file');
 
 // GET semua produk
 exports.getAllProducts = async (req, res) => {
@@ -90,72 +81,5 @@ exports.deleteProduct = async (req, res) => {
   } catch (err) {
     console.error('Gagal hapus produk:', err);
     res.status(500).json({ message: 'Gagal menghapus produk' });
-  }
-};
-
-// IMPORT produk dari CSV
-exports.importProductJSON = async (req, res) => {
-  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
-
-  try {
-    const productsData = req.body;
-
-    if (!Array.isArray(productsData)) {
-      return res.status(400).json({ message: 'Format JSON tidak valid (harus array produk)' });
-    }
-
-    const inserted = await Product.insertMany(productsData, { ordered: false });
-
-    // ✅ Catat aktivitas
-    if (user) {
-      await logActivity(user, `Import data produk: ${inserted.length} produk berhasil ditambahkan`);
-    }
-
-    res.json({ message: `${inserted.length} produk berhasil diimpor` });
-  } catch (err) {
-    console.error('❌ Gagal import produk JSON:', err);
-
-    // ❗ Jika error karena duplikat (kode 11000)
-    if (err.code === 11000 || err.writeErrors) {
-      const insertedCount = err.result?.result?.nInserted || 0;
-
-      // ✅ Catat aktivitas meskipun sebagian gagal
-      if (user) {
-        await logActivity(user, `Import produk sebagian berhasil: ${insertedCount} ditambahkan`);
-      }
-
-      return res.status(400).json({
-        message: `Sebagian gagal impor karena duplikat atau format salah. ${insertedCount} produk berhasil ditambahkan.`,
-      });
-    }
-
-    res.status(500).json({ message: 'Gagal mengimpor produk' });
-  }
-};
-
-// EXPORT produk ke CSV
-exports.exportProductJSON = async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.header('Content-Type', 'application/json');
-    res.attachment('products_backup.json');
-    res.send(JSON.stringify(products, null, 2));
-  } catch (err) {
-    console.error('❌ Gagal export produk JSON:', err);
-    res.status(500).json({ message: 'Gagal export data produk' });
-  }
-};
-
-
-// RESET semua produk
-exports.resetProducts = async (req, res) => {
-  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
-  try {
-    const result = await Product.deleteMany();
-    logActivity(user, `Reset semua produk (${result.deletedCount} data dihapus)`);
-    res.json({ message: `✅ Semua produk berhasil dihapus (${result.deletedCount} produk)` });
-  } catch (err) {
-    console.error('❌ Gagal reset:', err);
-    res.status(500).json({ message: 'Gagal reset produk' });
   }
 };

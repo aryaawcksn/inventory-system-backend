@@ -6,8 +6,5 @@ router.get('/', productController.getAllProducts);
 router.post('/', productController.addProduct);
 router.put('/:id', productController.updateProduct);
 router.delete('/:id', productController.deleteProduct);
-router.post('/import-json', productController.importProductJSON);
-router.get('/export-json', productController.exportProductJSON);
-router.delete('/reset', productController.resetProducts);
 
 module.exports = router;
