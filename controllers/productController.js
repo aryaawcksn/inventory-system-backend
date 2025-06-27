@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const mongoose = require('mongoose');
-
+const { logActivity } = require('../utils/logger'); // pastikan path-nya benar
+ // pastikan path ini benar
 
 // GET semua produk
 exports.getAllProducts = async (req, res) => {
