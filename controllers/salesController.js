@@ -55,31 +55,37 @@ const addSale = async (req, res) => {
   }
 };
 
-const exportSales = async (req, res) => {
+// === EXPORT ke JSON ===
+// === EXPORT ke JSON ===
+const exportSalesJSON = async (req, res) => {
   try {
-    const sales = await Sale.find().lean(); // gunakan lean() agar lebih ringan
-
-    const formattedSales = sales.map((sale) => ({
-      _id: sale._id.toString(), // konversi ke string
-      date: new Date(sale.date).toISOString(),
-      items: sale.items,
-      qty: sale.qty,
-      total: sale.total,
-      status: sale.status
-    }));
-
-    const fields = ['_id', 'date', 'items', 'qty', 'total', 'status'];
-    const parser = new Parser({ fields });
-    const csvData = parser.parse(formattedSales);
-
-    res.header('Content-Type', 'text/csv');
-    res.attachment('sales_export.csv');
-    res.send(csvData);
+    const sales = await Sale.find();
+    res.header('Content-Type', 'application/json');
+    res.attachment('sales_backup.json');
+    res.send(JSON.stringify(sales, null, 2));
   } catch (err) {
-    console.error('❌ Gagal export CSV:', err);
-    res.status(500).json({ message: 'Gagal export data' });
+    console.error('❌ Gagal export JSON:', err);
+    res.status(500).json({ message: 'Gagal export data JSON' });
   }
 };
+
+// === IMPORT dari JSON ===
+const importSalesJSON = async (req, res) => {
+  try {
+    const salesData = req.body;
+
+    if (!Array.isArray(salesData)) {
+      return res.status(400).json({ message: 'Format JSON tidak valid (harus array)' });
+    }
+
+    const inserted = await Sale.insertMany(salesData);
+    res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
+  } catch (err) {
+    console.error('❌ Gagal import JSON:', err);
+    res.status(500).json({ message: 'Gagal mengimpor data JSON' });
+  }
+};
+
 
 
 // === IMPORT dari CSV ===
@@ -90,40 +96,30 @@ const importSales = (req, res) => {
     }
 
     const filePath = path.join(__dirname, '../uploads', req.file.filename);
-    const sales = [];
     const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
 
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('data', (row) => {
-        const { date, items, qty, total, status } = row;
-        if (date && items && qty && total) {
-          sales.push({
-            date: new Date(date),
-            items,
-            qty: parseInt(qty),
-            total: parseFloat(total),
-            status: status || 'completed',
-          });
-        }
-      })
-      .on('end', async () => {
-        try {
-          const inserted = await Sale.insertMany(sales);
-          fs.unlinkSync(filePath);
-          logActivity(user, `Import data penjualan: ${inserted.length} entri`);
-          res.json({ message: `${inserted.length} transaksi diimpor` });
-        } catch (e) {
-          console.error('❌ Gagal simpan:', e);
-          res.status(500).json({ message: 'Gagal menyimpan transaksi' });
-        }
-      })
-      .on('error', (err) => {
-        console.error('❌ Gagal parsing CSV:', err);
-        res.status(500).json({ message: 'Gagal parsing CSV' });
-      });
+    try {
+      const data = fs.readFileSync(filePath, 'utf8');
+      const sales = JSON.parse(data).map((sale) => ({
+        date: new Date(sale.date),
+        items: sale.items,
+        qty: parseInt(sale.qty),
+        total: parseFloat(sale.total),
+        status: sale.status || 'completed',
+      }));
+
+      const inserted = await Sale.insertMany(sales);
+      fs.unlinkSync(filePath);
+
+      logActivity(user, `Import data penjualan (JSON): ${inserted.length} entri`);
+      res.json({ message: `${inserted.length} transaksi diimpor dari JSON` });
+    } catch (error) {
+      console.error('❌ Gagal import JSON:', error);
+      res.status(500).json({ message: 'Gagal mengimpor data JSON' });
+    }
   });
 };
+
 
 // === RESET penjualan ===
 const resetSales = async (req, res) => {
@@ -138,7 +134,7 @@ const resetSales = async (req, res) => {
 module.exports = {
   getAllSales,
   addSale,
-  exportSales,
-  importSales,
+  exportSalesJSON,
+  importSalesJSON,
   resetSales
 };

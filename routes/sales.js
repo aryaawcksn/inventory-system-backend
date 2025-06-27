@@ -4,8 +4,8 @@ const salesController = require('../controllers/salesController');
 
 router.get('/', salesController.getAllSales);
 router.post('/', salesController.addSale);
-router.get('/export', salesController.exportSales);
-router.post('/import', salesController.importSales);
+router.get('/export-json', salesController.exportSalesJSON);
+router.post('/import-json', salesController.importSalesJSON);
 router.delete('/reset', salesController.resetSales);
 
 module.exports = router;

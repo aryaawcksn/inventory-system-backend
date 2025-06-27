@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const { logActivity } = require('./activityController');
+const Sale = require('../models/Sale');
 
 exports.resetAllData = async (req, res) => {
   try {
@@ -17,5 +18,18 @@ exports.resetAllData = async (req, res) => {
   } catch (err) {
     console.error('❌ Gagal reset semua data:', err);
     return res.status(500).json({ message: 'Gagal mereset semua data' });
+  }
+};
+
+exports.exportBackupJSON = async (req, res) => {
+  try {
+    const products = await Product.find();
+    const sales = await Sale.find();
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename=backup.json');
+    res.send(JSON.stringify({ products, sales }, null, 2));
+  } catch (err) {
+    res.status(500).json({ message: '❌ Gagal membuat backup' });
   }
 };
