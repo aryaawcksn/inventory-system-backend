@@ -71,20 +71,37 @@ const exportSalesJSON = async (req, res) => {
 
 // === IMPORT dari JSON ===
 const importSalesJSON = async (req, res) => {
-  try {
-    const salesData = req.body;
+  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
+  const salesData = req.body;
 
-    if (!Array.isArray(salesData)) {
-      return res.status(400).json({ message: 'Format JSON tidak valid (harus array)' });
+  if (!Array.isArray(salesData)) {
+    return res.status(400).json({ message: 'Format JSON tidak valid (harus array)' });
+  }
+
+  try {
+    const inserted = await Sale.insertMany(salesData, { ordered: false });
+    const successCount = inserted.length;
+
+    // ✅ Catat log aktivitas
+    if (user) {
+      logActivity(user, `Import data penjualan (JSON): ${successCount} entri berhasil`);
     }
 
-    const inserted = await Sale.insertMany(salesData);
-    res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
+    res.json({ message: `${successCount} transaksi berhasil diimpor` });
   } catch (err) {
-    console.error('❌ Gagal import JSON:', err);
-    res.status(500).json({ message: 'Gagal mengimpor data JSON' });
+    // Kalau sebagian gagal karena duplikat, MongoError akan muncul
+    const insertedCount = err.insertedDocs ? err.insertedDocs.length : 0;
+
+    if (user) {
+      logActivity(user, `Import data penjualan (JSON): ${insertedCount} entri berhasil, sebagian gagal`);
+    }
+
+    res.status(200).json({
+      message: `${insertedCount} transaksi berhasil diimpor, sebagian gagal karena duplikat atau data tidak valid.`,
+    });
   }
 };
+
 
 
 
