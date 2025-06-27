@@ -1,10 +1,11 @@
 const Sale = require('../models/Sale');
 const Product = require('../models/Product');
 const { Parser } = require('json2csv');
-const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
+const upload = require('../middleware/upload');
+const { logActivity } = require('./activityController');
 
 // === GET semua penjualan ===
 const getAllSales = async (req, res) => {
@@ -54,25 +55,34 @@ const addSale = async (req, res) => {
   }
 };
 
-// === EXPORT ke CSV ===
 const exportSales = async (req, res) => {
   try {
-    const sales = await Sale.find();
+    const sales = await Sale.find().lean(); // gunakan lean() agar lebih ringan
+
+    const formattedSales = sales.map((sale) => ({
+      _id: sale._id.toString(), // konversi ke string
+      date: new Date(sale.date).toISOString(),
+      items: sale.items,
+      qty: sale.qty,
+      total: sale.total,
+      status: sale.status
+    }));
+
     const fields = ['_id', 'date', 'items', 'qty', 'total', 'status'];
     const parser = new Parser({ fields });
-    const csvData = parser.parse(sales);
+    const csvData = parser.parse(formattedSales);
 
     res.header('Content-Type', 'text/csv');
     res.attachment('sales_export.csv');
     res.send(csvData);
   } catch (err) {
+    console.error('❌ Gagal export CSV:', err);
     res.status(500).json({ message: 'Gagal export data' });
   }
 };
 
-// === IMPORT dari CSV ===
-const upload = multer({ dest: 'uploads/' }).single('file');
 
+// === IMPORT dari CSV ===
 const importSales = (req, res) => {
   upload(req, res, async function (err) {
     if (err || !req.file) {
@@ -80,16 +90,16 @@ const importSales = (req, res) => {
     }
 
     const filePath = path.join(__dirname, '../uploads', req.file.filename);
-    const salesData = [];
+    const sales = [];
+    const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
 
     fs.createReadStream(filePath)
       .pipe(csv())
       .on('data', (row) => {
         const { date, items, qty, total, status } = row;
         if (date && items && qty && total) {
-          salesData.push({
-            date,
-          
+          sales.push({
+            date: new Date(date),
             items,
             qty: parseInt(qty),
             total: parseFloat(total),
@@ -99,15 +109,17 @@ const importSales = (req, res) => {
       })
       .on('end', async () => {
         try {
-          await Sale.insertMany(salesData);
+          const inserted = await Sale.insertMany(sales);
           fs.unlinkSync(filePath);
-          res.status(200).json({ message: `✅ Berhasil import ${salesData.length} transaksi` });
-        } catch (error) {
-          res.status(500).json({ message: 'Gagal import ke database' });
+          logActivity(user, `Import data penjualan: ${inserted.length} entri`);
+          res.json({ message: `${inserted.length} transaksi diimpor` });
+        } catch (e) {
+          console.error('❌ Gagal simpan:', e);
+          res.status(500).json({ message: 'Gagal menyimpan transaksi' });
         }
       })
-      .on('error', (error) => {
-        console.error('❌ Gagal parsing CSV:', error);
+      .on('error', (err) => {
+        console.error('❌ Gagal parsing CSV:', err);
         res.status(500).json({ message: 'Gagal parsing CSV' });
       });
   });
@@ -117,7 +129,7 @@ const importSales = (req, res) => {
 const resetSales = async (req, res) => {
   try {
     await Sale.deleteMany({});
-    res.status(200).json({ message: '🧹 Semua data penjualan berhasil dihapus' });
+    res.status(200).json({ message: '✅ Semua data penjualan berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ message: 'Gagal reset data penjualan' });
   }
