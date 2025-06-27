@@ -117,4 +117,53 @@ exports.resetProducts = async (req, res) => {
   }
 };
 
+// controllers/productController.js
+exports.exportProductsJSON = async (req, res) => {
+  try {
+    const products = await Product.find().lean();
+    const jsonData = JSON.stringify(products, null, 2);
+
+    res.setHeader('Content-Disposition', 'attachment; filename="produk.json"');
+    res.setHeader('Content-Type', 'application/json');
+    res.send(jsonData);
+  } catch (err) {
+    console.error('Gagal export produk:', err);
+    res.status(500).json({ message: 'Gagal export produk' });
+  }
+};
+
+// POST import produk dari file JSON
+exports.importProducts = async (req, res) => {
+  try {
+    const products = req.body;
+
+    if (!Array.isArray(products)) {
+      return res.status(400).json({ message: 'Format data tidak valid (harus array).' });
+    }
+
+    let inserted = 0;
+    let updated = 0;
+
+    for (const p of products) {
+      if (!p.sku || !p.name) continue;
+
+      const existing = await Product.findOne({ sku: p.sku });
+      if (existing) {
+        await Product.updateOne({ sku: p.sku }, p);
+        updated++;
+      } else {
+        await Product.create(p);
+        inserted++;
+      }
+    }
+
+    res.json({ message: `Import selesai. Ditambahkan: ${inserted}, Diperbarui: ${updated}` });
+  } catch (err) {
+    console.error('Gagal import produk:', err);
+    res.status(500).json({ message: 'Gagal import data produk' });
+  }
+};
+
+
+
 
