@@ -27,16 +27,32 @@ exports.addProduct = async (req, res) => {
     if (existing) {
       existing.stock += parseInt(stock);
       await existing.save();
-      logActivity(user, `Menambah stok untuk SKU ${sku}: +${stock} (Total: ${existing.stock})`);
+
+      try {
+        if (user) {
+          await logActivity(user, `Menambah stok untuk SKU ${sku}: +${stock} (Total: ${existing.stock})`);
+        }
+      } catch (logErr) {
+        console.error('Gagal mencatat log stok:', logErr.message);
+      }
+
       return res.status(200).json({ message: 'Stok produk berhasil diperbarui' });
     } else {
       const newProduct = new Product({ name, sku, stock, price, status: status || 'active' });
       await newProduct.save();
-      logActivity(user, `Menambahkan produk baru: ${name} (SKU: ${sku})`);
+
+      try {
+        if (user) {
+          await logActivity(user, `Menambahkan produk baru: ${name} (SKU: ${sku})`);
+        }
+      } catch (logErr) {
+        console.error('Gagal mencatat log produk:', logErr.message);
+      }
+
       return res.status(201).json({ message: 'Produk berhasil ditambahkan' });
     }
   } catch (err) {
-    console.error('Gagal tambah/update produk:', err);
+    console.error('Gagal tambah/update produk:', err.message, err);
     res.status(500).json({ message: 'Gagal menambahkan atau memperbarui produk' });
   }
 };
@@ -69,9 +85,12 @@ exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
   const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'ID tidak valid' });
+  }
+
   try {
     const deleted = await Product.findByIdAndDelete(id);
-
     if (!deleted) {
       return res.status(404).json({ message: 'Produk tidak ditemukan' });
     }
