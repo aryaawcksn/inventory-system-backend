@@ -42,7 +42,12 @@ exports.addProduct = async (req, res) => {
 // PUT edit produk
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
+  console.log('🟡 ID yang diterima untuk update:', id);
   const { name, stock, price, sku, status } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'ID tidak valid' });
+  }
 
   try {
     const updated = await Product.findByIdAndUpdate(id, {
@@ -63,8 +68,13 @@ exports.updateProduct = async (req, res) => {
 // DELETE produk
 exports.deleteProduct = async (req, res) => {
   const { id } = req.params;
+  console.log('🟡 ID yang diterima untuk delete:', id);
   const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'ID tidak valid' });
+  }
+  
   try {
     const deleted = await Product.findByIdAndDelete(id);
 
