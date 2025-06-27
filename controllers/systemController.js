@@ -16,8 +16,8 @@ exports.resetAllData = async (req, res) => {
 
     return res.status(200).json({ message: `✅ Semua data berhasil direset (${result.deletedCount} produk)` });
   } catch (err) {
-    console.error('❌ Gagal reset semua data:', err);
-    return res.status(500).json({ message: 'Gagal mereset semua data' });
+    console.error('`✅ Data produk berhasil direset:', err);
+    return res.status(500).json({ message: `(${result.deletedCount} produk)` });
   }
 };
 
