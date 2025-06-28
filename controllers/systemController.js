@@ -1,5 +1,5 @@
 const Product = require('../models/Product');
-const { logActivity } = require('./activityController');
+const logActivity = require('../utils/logger');
 const Sale = require('../models/Sale');
 
 exports.resetAllData = async (req, res) => {
