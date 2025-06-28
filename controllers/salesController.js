@@ -75,28 +75,52 @@ const importSalesJSON = async (req, res) => {
   const user = userHeader ? JSON.parse(userHeader) : null;
 
   try {
-    // Hapus _id dari tiap entri agar tidak conflict
-    const salesData = req.body.map(sale => {
-      const { _id, ...rest } = sale;
-      return rest;
-    });
+    const salesData = req.body;
 
     if (!Array.isArray(salesData)) {
       return res.status(400).json({ message: 'Format JSON tidak valid (harus array)' });
     }
 
-    const inserted = await Sale.insertMany(salesData);
+    const result = await Sale.insertMany(salesData, { ordered: false })
+      .then((inserted) => ({ inserted, errors: [] }))
+      .catch((error) => {
+        const errors = error.writeErrors?.map(err => ({
+          index: err.index,
+          code: err.code,
+          message: err.err?.errmsg || err.err?.message || 'Data tidak valid'
+        })) || [];
+        
+        return {
+          inserted: error.insertedDocs || [],
+          errors,
+        };
+      });
 
-    if (user) {
-      await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
+    if (user && result.inserted.length > 0) {
+      await logActivity(user, `Import data penjualan: ${result.inserted.length} transaksi`);
     }
 
-    res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
+    const duplicateErrors = result.errors.filter(e => e.code === 11000);
+    const otherErrors = result.errors.filter(e => e.code !== 11000);
+
+    const message = result.errors.length > 0
+      ? `⚠️ Import selesai. ${result.inserted.length} berhasil, ${duplicateErrors.length} duplikat, ${otherErrors.length} gagal`
+      : `${result.inserted.length} transaksi berhasil diimpor`;
+
+    return res.json({
+      message,
+      imported: result.inserted.length,
+      duplicates: duplicateErrors.length,
+      failed: otherErrors.length,
+      errors: result.errors,
+    });
+
   } catch (err) {
     console.error('❌ Gagal import JSON:', err);
-    res.status(500).json({ message: 'Gagal import data penjualan' });
+    return res.status(500).json({ message: 'Terjadi kesalahan saat memproses file JSON' });
   }
 };
+
 
 
 // === IMPORT dari CSV ===
