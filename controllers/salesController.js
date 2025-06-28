@@ -84,7 +84,6 @@ const importSalesJSON = async (req, res) => {
     console.error('❌ Gagal import JSON:', err);
     res.status(500).json({ message: 'Harap Hapus Data Penjualan Terlebih Dahulu' });
   }
-  await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
 };
 
 // === IMPORT dari CSV ===
@@ -128,8 +127,6 @@ const resetSales = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Gagal reset data penjualan' });
   }
-  const logMessage = `✅ Import sales Berhasil: Added ${inserted}, Updated: ${updated}`;
-  await logActivity(user, logMessage); // ✅ Tambahkan log
 };
 
 module.exports = {
