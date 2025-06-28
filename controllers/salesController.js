@@ -99,9 +99,7 @@ const importSalesJSON = async (req, res) => {
 
       return rest;
     });
-
-    await Sale.insertMany(cleanedData, { ordered: false });
-
+    const inserted = await Sale.insertMany(cleanedData, { ordered: false });
     if (user) {
       await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
     }
