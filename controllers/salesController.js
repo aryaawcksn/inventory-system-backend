@@ -89,6 +89,9 @@ const importSalesJSON = async (req, res) => {
 
     res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
   } catch (err) {
+    if (user) {
+      await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
+    }
     console.error('❌ Gagal import JSON:', err);
     res.status(500).json({ message: 'Harap Hapus Data Penjualan Terlebih Dahulu' });
   }
@@ -134,10 +137,10 @@ const resetSales = async (req, res) => {
     await Sale.deleteMany({});
     res.status(200).json({ message: '✅ Semua data penjualan berhasil dihapus' });
   } catch (err) {
+    const logMessage = `✅ Import sales Berhasil: Added ${inserted}, Updated: ${updated}`;
+    await logActivity(user, logMessage); // ✅ Tambahkan log
     res.status(500).json({ message: 'Gagal reset data penjualan' });
   }
-  const logMessage = `✅ Import sales Berhasil: Added ${inserted}, Updated: ${updated}`;
-  await logActivity(user, logMessage); // ✅ Tambahkan log
 };
 
 module.exports = {
