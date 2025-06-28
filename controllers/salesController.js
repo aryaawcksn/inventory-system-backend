@@ -137,16 +137,25 @@ const importSales = (req, res) => {
   });
 };
 
-
 // === RESET penjualan ===
 const resetSales = async (req, res) => {
+  const userHeader = req.headers['x-user'];
+  const user = userHeader ? JSON.parse(userHeader) : null;
+
   try {
-    await Sale.deleteMany({});
-    res.status(200).json({ message: '✅ Semua data penjualan berhasil dihapus' });
+    const result = await Sale.deleteMany({});
+
+    if (user) {
+      await logActivity(user, `Reset semua data penjualan (${result.deletedCount} entri dihapus)`);
+    }
+
+    res.status(200).json({ message: `✅ Semua data penjualan berhasil dihapus (${result.deletedCount})` });
   } catch (err) {
+    console.error('❌ Gagal reset penjualan:', err);
     res.status(500).json({ message: 'Gagal reset data penjualan' });
   }
 };
+
 
 module.exports = {
   getAllSales,
