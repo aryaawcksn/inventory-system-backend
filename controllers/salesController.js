@@ -75,43 +75,28 @@ const importSalesJSON = async (req, res) => {
   const user = userHeader ? JSON.parse(userHeader) : null;
 
   try {
-    const salesData = req.body;
+    // Hapus _id dari tiap entri agar tidak conflict
+    const salesData = req.body.map(sale => {
+      const { _id, ...rest } = sale;
+      return rest;
+    });
 
     if (!Array.isArray(salesData)) {
       return res.status(400).json({ message: 'Format JSON tidak valid (harus array)' });
     }
 
-    const result = await Sale.insertMany(salesData, { ordered: false })
-      .then((inserted) => ({ inserted, errors: [] }))
-      .catch((error) => ({
-        inserted: error.insertedDocs || [],
-        errors: error.writeErrors?.map(err => ({
-          index: err.index,
-          message: err.err?.errmsg || err.err?.message || 'Data tidak valid'
-        })) || []
-      }));
+    const inserted = await Sale.insertMany(salesData);
 
-    // Catat log jika ada data yang berhasil masuk
-    if (user && user.name && user.role && result.inserted.length > 0) {
-      await logActivity(user, `Import data penjualan: ${result.inserted.length} transaksi`);
+    if (user) {
+      await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
     }
 
-    return res.json({
-      message:
-        result.errors.length > 0
-          ? `⚠️ Import selesai dengan ${result.inserted.length} berhasil, ${result.errors.length} gagal`
-          : `${result.inserted.length} transaksi berhasil diimpor`,
-      imported: result.inserted.length,
-      failed: result.errors.length,
-      errors: result.errors,
-    });
-
+    res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
   } catch (err) {
     console.error('❌ Gagal import JSON:', err);
-    return res.status(500).json({ message: 'Terjadi kesalahan saat memproses file JSON' });
+    res.status(500).json({ message: 'Gagal import data penjualan' });
   }
 };
-
 
 
 // === IMPORT dari CSV ===
