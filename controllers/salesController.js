@@ -84,6 +84,7 @@ const importSalesJSON = async (req, res) => {
     console.error('❌ Gagal import JSON:', err);
     res.status(500).json({ message: 'Harap Hapus Data Penjualan Terlebih Dahulu' });
   }
+  await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
 };
 
 // === IMPORT dari CSV ===
@@ -121,8 +122,12 @@ const importSales = (req, res) => {
 
 // === RESET penjualan ===
 const resetSales = async (req, res) => {
+  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
+
   try {
-    await Sale.deleteMany({});
+    const deleted = await Sale.deleteMany({});
+    await logActivity(user, `Reset data penjualan (${deleted.deletedCount} entri dihapus)`);
+
     res.status(200).json({ message: '✅ Semua data penjualan berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ message: 'Gagal reset data penjualan' });
