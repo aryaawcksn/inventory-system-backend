@@ -136,7 +136,6 @@ exports.exportProductsJSON = async (req, res) => {
 exports.importProducts = async (req, res) => {
   try {
     const products = req.body;
-    const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null; // ✅ Tambahkan ini
 
     if (!Array.isArray(products)) {
       return res.status(400).json({ message: 'Format data tidak valid (harus array).' });
@@ -159,7 +158,7 @@ exports.importProducts = async (req, res) => {
     }
 
     const logMessage = `Import produk: Ditambahkan: ${inserted}, Diperbarui: ${updated}`;
-    await logActivity(user, logMessage); // ✅ sekarang aman digunakan
+    await logActivity(user, logMessage); // ✅ Tambahkan log
 
     res.json({ message: `Import selesai. Ditambahkan: ${inserted}, Diperbarui: ${updated}` });
   } catch (err) {
@@ -167,7 +166,6 @@ exports.importProducts = async (req, res) => {
     res.status(500).json({ message: 'Gagal import data produk' });
   }
 };
-
 
 
 
