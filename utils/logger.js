@@ -1,19 +1,17 @@
-// utils/logger.js
 const ActivityLog = require('../models/activitylog');
 
 const logActivity = async (user, action) => {
-  if (!user || !user.name) return;
+  if (!user || !action) return;
 
   try {
     await ActivityLog.create({
-      userId: user.id,
+      user_id: user._id,
       name: user.name,
       role: user.role,
       action,
     });
-    console.log(`📝 Aktivitas: ${user.name} - ${action}`);
   } catch (err) {
-    console.error('❌ Gagal mencatat aktivitas:', err);
+    console.error('❌ Gagal mencatat log aktivitas:', err.message);
   }
 };
 

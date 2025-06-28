@@ -5,7 +5,7 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
 const upload = require('../middleware/upload');
-const { logActivity } = require('./activityController');
+const logActivity = require('../utils/logger');
 
 // === GET semua penjualan ===
 const getAllSales = async (req, res) => {
