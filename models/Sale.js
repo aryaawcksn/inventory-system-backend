@@ -7,7 +7,6 @@ const saleSchema = new mongoose.Schema({
   items: { type: String },
   qty: { type: Number, required: true },
   total: { type: Number, required: true },
-  invoice: { type: String, required: true, unique: true },
   status: { type: String, default: 'completed' }
 }, { timestamps: true });
 
