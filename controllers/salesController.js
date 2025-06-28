@@ -83,17 +83,15 @@ const importSalesJSON = async (req, res) => {
 
     const inserted = await Sale.insertMany(salesData);
 
-    if (user) {
+    // Cek user sebelum log
+    if (user && user.name && user.role) {
       await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
     }
 
-    res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
+    return res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
   } catch (err) {
-    if (user) {
-      await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
-    }
     console.error('❌ Gagal import JSON:', err);
-    res.status(500).json({ message: 'Harap Hapus Data Penjualan Terlebih Dahulu' });
+    return res.status(500).json({ message: 'Gagal import data penjualan' });
   }
 };
 
