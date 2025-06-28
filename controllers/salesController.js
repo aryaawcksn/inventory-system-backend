@@ -18,10 +18,16 @@ const getAllSales = async (req, res) => {
 };
 
 // === Tambah penjualan baru + kurangi stok ===
+const generateInvoiceCode = () => {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `INV-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${Date.now()}`;
+};
+
 const addSale = async (req, res) => {
   const { date, productId, items, qty, total, status } = req.body;
 
-  if (!productId || !qty) {
+  if (!productId || !qty || qty <= 0) {
     return res.status(400).json({ message: 'Produk dan jumlah wajib diisi' });
   }
 
@@ -39,21 +45,24 @@ const addSale = async (req, res) => {
 
     // Simpan penjualan
     const sale = new Sale({
-  date,
+      date: date || Date.now(),
+      productId,
+      items,
+      qty,
+      total: total || (product.price * qty),
+      invoice: generateInvoiceCode(), // 🟢 Tambahkan invoice di sini
+      status: status || 'completed'
+    });
 
-  productId, // ⬅️ tambahkan ini
-  items,
-  qty,
-  total,
-  status: status || 'completed'
-});
     await sale.save();
 
     res.status(201).json({ message: 'Penjualan berhasil ditambahkan dan stok diperbarui' });
   } catch (err) {
+    console.error('❌ Error saat menambahkan penjualan:', err.message);
     res.status(500).json({ message: 'Gagal menambahkan penjualan' });
   }
 };
+
 
 // === EXPORT ke JSON ===
 // === EXPORT ke JSON ===
@@ -91,7 +100,7 @@ const importSalesJSON = async (req, res) => {
       return rest;
     });
 
-    const inserted = await Sale.insertMany(cleanedData);
+    await Sale.insertMany(cleanedData, { ordered: false });
 
     if (user) {
       await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
