@@ -75,28 +75,28 @@ const importSalesJSON = async (req, res) => {
   const user = userHeader ? JSON.parse(userHeader) : null;
 
   try {
-    const rawData = req.body;
+    // Hapus _id dari tiap entri agar tidak conflict
+    const salesData = req.body.map(sale => {
+      const { _id, ...rest } = sale;
+      return rest;
+    });
 
-    if (!Array.isArray(rawData)) {
+    if (!Array.isArray(salesData)) {
       return res.status(400).json({ message: 'Format JSON tidak valid (harus array)' });
     }
 
-    // Hapus _id, createdAt, updatedAt, dan __v sebelum insert
-    const cleanedData = rawData.map(({ _id, createdAt, updatedAt, __v, ...rest }) => rest);
-
-    const inserted = await Sale.insertMany(cleanedData);
+    const inserted = await Sale.insertMany(salesData);
 
     if (user) {
       await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
     }
 
-    return res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
+    res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
   } catch (err) {
     console.error('❌ Gagal import JSON:', err);
-    return res.status(500).json({ message: 'Gagal import data penjualan' });
+    res.status(500).json({ message: 'Gagal import data penjualan' });
   }
 };
-
 
 // === IMPORT dari CSV ===
 const importSales = (req, res) => {
