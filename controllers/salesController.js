@@ -71,6 +71,9 @@ const exportSalesJSON = async (req, res) => {
 
 // === IMPORT dari JSON ===
 const importSalesJSON = async (req, res) => {
+  const userHeader = req.headers['x-user'];
+  const user = userHeader ? JSON.parse(userHeader) : null;
+
   try {
     const salesData = req.body;
 
@@ -79,13 +82,18 @@ const importSalesJSON = async (req, res) => {
     }
 
     const inserted = await Sale.insertMany(salesData);
+
+    if (user) {
+      await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
+    }
+
     res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
   } catch (err) {
     console.error('❌ Gagal import JSON:', err);
     res.status(500).json({ message: 'Harap Hapus Data Penjualan Terlebih Dahulu' });
   }
-  await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
 };
+
 
 // === IMPORT dari CSV ===
 const importSales = (req, res) => {
