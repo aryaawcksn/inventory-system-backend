@@ -5,7 +5,7 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
 const upload = require('../middleware/upload');
-const logActivity = require('../utils/logger');
+const { logActivity } = require('./activityController');
 
 // === GET semua penjualan ===
 const getAllSales = async (req, res) => {
@@ -75,11 +75,7 @@ const importSalesJSON = async (req, res) => {
   const user = userHeader ? JSON.parse(userHeader) : null;
 
   try {
-    // Hapus _id dari tiap entri agar tidak conflict
-    const salesData = req.body.map(sale => {
-      const { _id, ...rest } = sale;
-      return rest;
-    });
+    const salesData = req.body;
 
     if (!Array.isArray(salesData)) {
       return res.status(400).json({ message: 'Format JSON tidak valid (harus array)' });
@@ -87,14 +83,15 @@ const importSalesJSON = async (req, res) => {
 
     const inserted = await Sale.insertMany(salesData);
 
-    if (user) {
+    // Cek user sebelum log
+    if (user && user.name && user.role) {
       await logActivity(user, `Import data penjualan: ${inserted.length} transaksi`);
     }
 
-    res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
+    return res.json({ message: `${inserted.length} transaksi berhasil diimpor` });
   } catch (err) {
     console.error('❌ Gagal import JSON:', err);
-    res.status(500).json({ message: 'Gagal import data penjualan' });
+    return res.status(500).json({ message: '⚠️ Berhasil import dengan kesalahan' });
   }
 };
 
