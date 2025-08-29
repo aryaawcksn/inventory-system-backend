@@ -21,6 +21,8 @@ const getAllSales = async (req, res) => {
 const updateSaleStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
+  // ambil user dari header (sama kayak di addProduct)
+  const user = req.headers['x-user'] ? JSON.parse(req.headers['x-user']) : null;
 
   try {
     const sale = await Sale.findByIdAndUpdate(
@@ -28,7 +30,13 @@ const updateSaleStatus = async (req, res) => {
       { status },
       { new: true } // balikin data terbaru setelah update
     );
+
     if (!sale) return res.status(404).json({ message: 'Penjualan tidak ditemukan' });
+
+    // 🔥 log activity admin kalau status diubah menjadi completed
+    if (status === 'completed' && user) {
+      await logActivity(user, `Mengonfirmasi penjualan: ${sale.items} (Qty: ${sale.qty}, Total: ${sale.total})`);
+    }
 
     res.json({ message: 'Status berhasil diperbarui', sale });
   } catch (err) {
@@ -36,6 +44,7 @@ const updateSaleStatus = async (req, res) => {
     res.status(500).json({ message: 'Gagal memperbarui status penjualan' });
   }
 };
+
 
 // === Tambah penjualan baru + kurangi stok ===
 const generateInvoiceCode = () => {
