@@ -17,6 +17,26 @@ const getAllSales = async (req, res) => {
   }
 };
 
+// === Update status penjualan ===
+const updateSaleStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const sale = await Sale.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true } // balikin data terbaru setelah update
+    );
+    if (!sale) return res.status(404).json({ message: 'Penjualan tidak ditemukan' });
+
+    res.json({ message: 'Status berhasil diperbarui', sale });
+  } catch (err) {
+    console.error('❌ Gagal update status:', err);
+    res.status(500).json({ message: 'Gagal memperbarui status penjualan' });
+  }
+};
+
 // === Tambah penjualan baru + kurangi stok ===
 const generateInvoiceCode = () => {
   const now = new Date();
@@ -169,5 +189,6 @@ module.exports = {
   addSale,
   exportSalesJSON,
   importSalesJSON,
-  resetSales
+  resetSales,
+  updateSaleStatus
 };
