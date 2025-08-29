@@ -7,6 +7,6 @@ router.post('/', salesController.addSale);
 router.get('/export-json', salesController.exportSalesJSON);
 router.post('/import-json', salesController.importSalesJSON);
 router.delete('/reset', salesController.resetSales);
-router.put('/:id/status', updateSaleStatus);
+router.put('/:id/status', salesController.updateSaleStatus);
 
 module.exports = router;
